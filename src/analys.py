@@ -8,8 +8,12 @@ import multiprocessing
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# directory path
 data_dir_path = my_path.DATA_DIR_PATH
 profile_dir_path = my_path.PROFILE_DIR_PATH
+figure_dir_path = my_path.FIGURE_DIR_PATH
+
+# data parameter
 dtypes = setting.D_TYPES
 ID = 'id'
 TARGET = 'target'
@@ -47,12 +51,11 @@ if __name__ == '__main__':
     output_profile(df_train, 'train.html')
     output_profile(df_test, 'test.html')
 
+    features = [c for c in df_train.columns if c not in [ID, TARGET]]
+
     df_corr = df_train.corr()
-    # sns.heatmap(df_corr, vmax=1, vmin=-1, center=0)
-    # plt.show()
-    # plt.savefig('../temp.png')
-    # print(df_corr[TARGET].drop([ID, TARGET]).sort_values(ascending=False))
-    ds_corr = df_corr[TARGET].drop([ID, TARGET])
-    print(ds_corr)
+    ds_target_corr = df_corr[TARGET][features].sort_values(ascending=False)
+    ds_target_corr = np.exp(ds_target_corr)
+    ds_target_corr.plot(kind='barh')
     plt.show()
-    plt.savefig('temp.png')
+    plt.savefig(figure_dir_path + 'corr.png')
