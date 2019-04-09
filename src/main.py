@@ -36,6 +36,22 @@ def output_submit_csv(pred, score, index, modelname):
     df_test_pred.to_csv(submit_dir_path + f'{modelname}_{str_nowtime}_{round(score * 100, 2)}.csv', header=True)
 
 
+def lgr_model(train, valid, test):
+    clf = LogisticRegression(class_weight='balanced', random_state=0, n_jobs=-1, penalty='l1')
+    clf.fit(train[features], train[TARGET])
+
+    valid_pred = clf.predict(valid[features])
+    auc_score = roc_auc_score(valid[TARGET], valid_pred)
+    print(auc_score)
+    print(classification_report(valid[TARGET], valid_pred))
+
+    ds_coef = pd.Series(clf.coef_[0], name='coef', index=features)
+    print(ds_coef.sort_values(ascending=False))
+    test_pred = clf.predict(test[features])
+
+    return test_pred, auc_score
+
+
 def rfc_model(train, valid, test):
     clf = RandomForestClassifier(n_estimators=500, class_weight='balanced', max_depth=5, random_state=0)
     clf.fit(train[features], train[TARGET])
@@ -50,23 +66,6 @@ def rfc_model(train, valid, test):
     print(ds_imp_feat)
 
     test_pred = clf.predict(test[features])
-
-    return test_pred, auc_score
-
-
-def lgr_model(train, valid, test):
-    clf = LogisticRegression(class_weight='balanced', random_state=0, n_jobs=-1, penalty='l1')
-    clf.fit(train[features], train[TARGET])
-
-    valid_pred = clf.predict(valid[features])
-    auc_score = roc_auc_score(valid[TARGET], valid_pred)
-    print(auc_score)
-    print(classification_report(valid[TARGET], valid_pred))
-
-    ds_coef = pd.Series(clf.coef_[0], name='coef', index=features)
-    print(ds_coef.sort_values(ascending=False))
-    test_pred = clf.predict(test[features])
-    print(np.abs(ds_coef).sort_values(ascending=False))
 
     return test_pred, auc_score
 
