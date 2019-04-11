@@ -6,7 +6,7 @@ import my_path
 import multiprocessing
 import matplotlib.pyplot as plt
 from datetime import datetime
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score, classification_report
 from sklearn.linear_model import LogisticRegression
@@ -46,7 +46,7 @@ def lgr_model(train, valid, test):
 
     ds_coef = pd.Series(clf.coef_[0], name='coef', index=features).sort_values(ascending=False)
     ds_odds = np.exp(ds_coef)
-    ds_odds.plot(kind='barh')
+    ds_odds.head(50).plot(kind='barh')
     plt.savefig(figure_dir_path + 'odds.png')
 
     valid_pred = clf.predict(valid[features])
@@ -59,41 +59,56 @@ def lgr_model(train, valid, test):
     return test_pred, auc_score
 
 
-# RandomForest Classification (plot score and importance features)
-def rfc_model(train, valid, test):
+# RandomForest Classification (plot score and return importance features)
+def rfc_model(train, valid):
     clf = RandomForestClassifier(n_estimators=500, class_weight='balanced', max_depth=5, random_state=0)
     clf.fit(train[features], train[TARGET])
 
     valid_pred = clf.predict(valid[features])
     auc_score = roc_auc_score(valid[TARGET], valid_pred)
     print(auc_score)
-    # print(classification_report(valid[TARGET], valid_pred))
 
     imp_feat = clf.feature_importances_
     ds_imp_feat = pd.Series(imp_feat, name='importance', index=features).sort_values(ascending=False)
     ds_imp_feat.plot(kind='barh')
     plt.savefig(figure_dir_path + 'imp_feat.png')
 
-    test_pred = clf.predict(test[features])
-
-    return test_pred, auc_score
+    return ds_imp_feat
 
 
 if __name__ == '__main__':
+    #
+    # Load Data File
+    #
+
     with multiprocessing.Pool() as pool:
         df_train, df_test = pool.map(load_file, ["train", "test"])
 
     features = [c for c in df_train.columns if c not in [ID, TARGET]]
 
+    #
+    # PreProcessing
+    #
+
+    print(df_train[features].describe())
     df_train[features] = StandardScaler().fit_transform(df_train[features])
     df_test[features] = StandardScaler().fit_transform(df_test[features])
 
     df_train, df_valid = train_test_split(df_train, test_size=0.1, random_state=0)
-    print(df_train.shape)
-    print(df_valid.shape)
+    print('train shape: ', df_train.shape)
+    print('valid shape: ', df_valid.shape)
+    print('test shape: ', df_test.shape)
+
+    #
+    # Random Forest output importance features
+    #
+
+    features_importance = rfc_model(df_train, df_valid)
+    features = features_importance.head(10).index
+
+    #
+    # Logistic Regression output score and predict
+    #
 
     lgr_pred, lgr_score = lgr_model(df_train, df_valid, df_test)
     output_submit_csv(lgr_pred, lgr_score, df_test[ID], modelname='lgr')
-
-    rfc_pred, rfc_score = rfc_model(df_train, df_valid, df_test)
-    output_submit_csv(rfc_pred, rfc_score, df_test.index, modelname='rfc')

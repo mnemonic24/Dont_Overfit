@@ -56,6 +56,6 @@ if __name__ == '__main__':
     df_corr = df_train.corr()
     ds_target_corr = df_corr[TARGET][features].sort_values(ascending=False)
     ds_target_corr = np.exp(ds_target_corr)
-    ds_target_corr.plot(kind='barh')
+    ds_target_corr.head(50).plot(kind='barh')
     plt.show()
     plt.savefig(figure_dir_path + 'corr.png')
