@@ -1,12 +1,11 @@
 import pandas as pd
 import numpy as np
-import os
 import setting
 import my_path
 import multiprocessing
 import matplotlib.pyplot as plt
 from datetime import datetime
-from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score, classification_report
 from sklearn.linear_model import LogisticRegression
@@ -43,15 +42,12 @@ def output_submit_csv(pred, score, index, modelname):
 def lgr_model(train, valid, test):
     params = dict(C=[0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
                   penalty=['l2'],
-                  solver=['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga'])
+                  solver=['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga']
+                  )
     clf = LogisticRegression(class_weight='balanced', random_state=0)
     cv = GridSearchCV(estimator=clf, param_grid=params, scoring='roc_auc', n_jobs=-1, cv=5, verbose=1)
     cv.fit(train[features], train[TARGET])
     print(cv.best_params_)
-    # ds_coef = pd.Series(cv.coef_[0], name='coef', index=features).sort_values(ascending=False)
-    # ds_odds = np.exp(ds_coef)
-    # ds_odds.head(50).plot(kind='barh')
-    # plt.savefig(figure_dir_path + 'odds.png')
 
     valid_pred = cv.predict(valid[features])
     auc_score = roc_auc_score(valid[TARGET], valid_pred)
@@ -65,7 +61,7 @@ def lgr_model(train, valid, test):
 
 # RandomForest Classification (plot score and return importance features)
 def rfc_model(train, valid):
-    clf = RandomForestClassifier(n_estimators=500, class_weight='balanced', max_depth=5, random_state=0)
+    clf = RandomForestClassifier(n_estimators=500, class_weight='balanced', max_depth=5, random_state=0, )
     clf.fit(train[features], train[TARGET])
 
     valid_pred = clf.predict(valid[features])
