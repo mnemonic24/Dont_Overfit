@@ -6,7 +6,7 @@ import my_path
 import multiprocessing
 import matplotlib.pyplot as plt
 from datetime import datetime
-from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score, classification_report
 from sklearn.linear_model import LogisticRegression
@@ -41,20 +41,24 @@ def output_submit_csv(pred, score, index, modelname):
 
 # Logistic Regression (plot score and coef)
 def lgr_model(train, valid, test):
-    clf = LogisticRegression(class_weight='balanced', random_state=0, n_jobs=-1, penalty='l1')
-    clf.fit(train[features], train[TARGET])
+    params = dict(C=[0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
+                  penalty=['l2'],
+                  solver=['newton-cg', 'lbfgs', 'liblinear', 'sag', 'saga'])
+    clf = LogisticRegression(class_weight='balanced', random_state=0)
+    cv = GridSearchCV(estimator=clf, param_grid=params, scoring='roc_auc', n_jobs=-1, cv=5, verbose=1)
+    cv.fit(train[features], train[TARGET])
+    print(cv.best_params_)
+    # ds_coef = pd.Series(cv.coef_[0], name='coef', index=features).sort_values(ascending=False)
+    # ds_odds = np.exp(ds_coef)
+    # ds_odds.head(50).plot(kind='barh')
+    # plt.savefig(figure_dir_path + 'odds.png')
 
-    ds_coef = pd.Series(clf.coef_[0], name='coef', index=features).sort_values(ascending=False)
-    ds_odds = np.exp(ds_coef)
-    ds_odds.head(50).plot(kind='barh')
-    plt.savefig(figure_dir_path + 'odds.png')
-
-    valid_pred = clf.predict(valid[features])
+    valid_pred = cv.predict(valid[features])
     auc_score = roc_auc_score(valid[TARGET], valid_pred)
     print(auc_score)
     print(classification_report(valid[TARGET], valid_pred))
 
-    test_pred = clf.predict(test[features])
+    test_pred = cv.predict(test[features])
 
     return test_pred, auc_score
 
@@ -90,7 +94,6 @@ if __name__ == '__main__':
     # PreProcessing
     #
 
-    print(df_train[features].describe())
     df_train[features] = StandardScaler().fit_transform(df_train[features])
     df_test[features] = StandardScaler().fit_transform(df_test[features])
 
